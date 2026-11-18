@@ -28,6 +28,10 @@
 
   const result = (value, errors) => ({ ok: Object.keys(errors).length === 0, value, errors });
 
+  /* The service runs on South African time (UTC+2, no daylight saving), so "today" is the SAST date
+     whatever the browser's clock or the test machine's time zone says. */
+  const serviceDay = iso => new Date(Date.parse(iso) + 2 * 3600 * 1000).toISOString().slice(0, 10);
+
   function validateClient(src) {
     const v = {}, e = {};
     required(src, v, e, [['firstName', 'First name'], ['lastName', 'Last name'], ['phone', 'Contact number'],
@@ -64,7 +68,7 @@
     const v = {}, e = {};
     required(src, v, e, [['time', 'Start time'], ['cuisine', 'Cuisine'], ['address', 'Event address'], ['area', 'Area']]);
     v.date = str(src.date);
-    const today = String(nowIso).slice(0, 10);
+    const today = serviceDay(nowIso);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(v.date)) e.date = 'Pick the event date';
     else if (v.date <= today) e.date = 'The event must be at least one day away';
     v.headcount = int(src.headcount);
@@ -91,7 +95,7 @@
       history: [{ at: nowIso, by: fields.clientId, action: 'request' }] };
   }
 
-  const today = iso => String(iso).slice(0, 10);
+  const today = serviceDay;
   /* action: [from statuses, who may do it, to status] */
   const RULES = {
     match:         [['requested'], (b, u) => u.role === 'admin', 'matched'],
@@ -127,9 +131,14 @@
       n.chefId = null;
     } else if (action === 'recordDeposit') {
       const price = Math.round(Number(str(p.agreedPrice)) * 100) / 100;
-      if (!Number.isFinite(price) || price <= 0) throw new Error('Enter the agreed price');
-      if (!DEPOSIT_METHODS.includes(p.method)) throw new Error('Pick how the deposit was paid (method)');
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(str(p.paidOn))) throw new Error('Enter the date the deposit was paid');
+      const errors = {};
+      if (!Number.isFinite(price) || price <= 0) errors.agreedPrice = 'Enter the agreed price';
+      if (!DEPOSIT_METHODS.includes(p.method)) errors.method = 'Choose the payment method: EFT, M-Pesa or cash';
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(str(p.paidOn))) errors.paidOn = 'Enter the date the deposit was paid';
+      if (Object.keys(errors).length) {
+        // The message is the first problem; .errors carries one message per field for the form.
+        throw Object.assign(new Error(Object.values(errors)[0]), { errors });
+      }
       n.agreedPrice = price;
       n.depositAmount = depositFor(price);
       n.depositMethod = p.method;
@@ -158,7 +167,14 @@
     requested: 'Waiting for a chef', matched: 'Chef offered, waiting for reply', confirmed: 'Chef confirmed, deposit due',
     deposit_recorded: 'Deposit paid to chef', completed: 'Event done, please rate', rated: 'Done and rated', cancelled: 'Cancelled',
   };
-  const statusLabel = s => STATUS_LABELS[s] || s;
+  /* The labels above are written to the client. The chef and the administrator see the same status
+     in their own words: only the client is asked to pay the deposit or to rate. */
+  const ROLE_LABELS = {
+    chef: { matched: 'Offered to you, please reply', confirmed: 'Confirmed, deposit due to you',
+      deposit_recorded: 'Deposit paid to you', completed: 'Event done, waiting for the client\u2019s rating' },
+    admin: { confirmed: 'Confirmed, deposit to record', completed: 'Event done, waiting for the client\u2019s rating' },
+  };
+  const statusLabel = (s, role) => (ROLE_LABELS[role] || {})[s] || STATUS_LABELS[s] || s;
 
   function formatRand(n) {
     if (n == null) return '';
@@ -166,5 +182,5 @@
   }
 
   return { validateClient, validateChef, validateBooking, depositFor, newBooking, transition, allowedActions,
-    suggestChefs, statusLabel, formatRand, DEPOSIT_METHODS, CUISINES };
+    suggestChefs, statusLabel, formatRand, serviceDay, DEPOSIT_METHODS, CUISINES };
 });

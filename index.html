@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <meta name="robots" content="noindex, nofollow">
   <meta name="description" content="Chef on Call: book a private chef for your event. Phase 1 demo.">
   <title>Chef on Call (demo)</title>
@@ -11,11 +12,16 @@
 </head>
 <body>
   <header class="top">
-    <a class="brand" href="#/">Chef on Call</a>
-    <nav id="nav" aria-label="Main"></nav>
+    <div class="top-in">
+      <a class="brand" href="#/">Chef on Call</a>
+      <nav id="nav" aria-label="Main"></nav>
+    </div>
   </header>
-  <p class="demo-banner">Demo. Everything you enter stays in this browser and is not sent anywhere. Use made-up details and @example.com addresses.</p>
-  <main id="main" tabindex="-1"></main>
+  <aside class="demo-banner" aria-label="Demo notice"><p>Demo. Everything you enter stays in this browser and is not sent anywhere. Use made-up details and @example.com addresses.</p></aside>
+  <main id="main" tabindex="-1">
+    <div id="status" role="status" aria-live="polite"></div>
+    <div id="view"></div>
+  </main>
   <footer class="foot">
     <p>Chef on Call Phase 1 demo, built for TWKB Talent Centric by MEND GROUP.</p>
     <button type="button" class="link-btn" id="reset">Reset demo data</button>

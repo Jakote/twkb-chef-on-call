@@ -197,6 +197,12 @@
       db.chefs[id] = { ...db.chefs[id], status };
       save();
     }
+    /* Turning down an applicant is not suspending a working chef: it is only for pending profiles. */
+    function declineChef(id) {
+      need('admin');
+      if (!db.chefs[id] || db.chefs[id].status !== 'pending') throw new Error('Only a pending application can be declined');
+      setChefStatus(id, 'declined');
+    }
     function users() { need('admin'); return db.users.map(publicUser); }
 
     function updateChefProfile(input) {
@@ -218,7 +224,7 @@
 
     return { ensureSeeded, reset, register, login, logout, me, createBooking, myBookings, getBooking, act,
       suggestChefs, chefs, users, updateChefProfile, chefPublic,
-      approveChef: id => setChefStatus(id, 'approved'), suspendChef: id => setChefStatus(id, 'suspended') };
+      approveChef: id => setChefStatus(id, 'approved'), suspendChef: id => setChefStatus(id, 'suspended'), declineChef };
   }
 
   return { createStore };
